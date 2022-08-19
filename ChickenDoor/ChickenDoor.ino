@@ -1,7 +1,7 @@
+#include <DS1307RTC.h>
+#include <TimeLib.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
-//#include <DS1307RTC.h>
-//#include <Time.h>
 #include <ezButton.h>
 
 #define VRX_PIN  A0 // Arduino pin connected to VRX pin
@@ -9,26 +9,27 @@
 #define SW_PIN   2  // Arduino pin connected to SW  pin
 
 ezButton button(SW_PIN);
-
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 const int adrLCD = 0x27;
-const int adrRTC = 0x62;
+const int adrRTC = 0x68;
 
 int joystickLimits[] = {0, 1023};
 int joystickThreshold = 200;
 
-int dateTime[] = {2022, 01, 01, 00, 00};
+
 
 String previousPrint[] = {"", ""};
 
 void setup()
 {
+  tmElements_t tm;
+  
   Wire.begin();
   lcd.begin();
   
   Serial.begin(9600);
-  Serial.println("\nInitializing...");
+  Serial.println("Initializing...");
   
   bool commLCD_OK = CheckI2CAdress(adrLCD);
   bool commRTC_OK = CheckI2CAdress(adrRTC);
@@ -38,17 +39,52 @@ void setup()
   lcd.begin();
   lcd.backlight();
 
-  setTime();
+  if (commLCD_OK and commRTC_OK) {
+    if (RTC.read(tm))
+      Print("Time is set.");
+    else if (RTC.chipPresent())
+      setTime();
+  }  
 }  
 void loop()
 {
+  tmElements_t tm;
+  
   button.loop(); 
   //ReadJoystick();
   
+//  if (RTC.read(tm)) {
+//    Serial.print("Ok, Time = ");
+//    print2digits(tm.Hour);
+//    Serial.write(':');
+//    print2digits(tm.Minute);
+//    Serial.write(':');
+//    print2digits(tm.Second);
+//    Serial.print(", Date (D/M/Y) = ");
+//    Serial.print(tm.Day);
+//    Serial.write('/');
+//    Serial.print(tm.Month);
+//    Serial.write('/');
+//    Serial.print(tmYearToCalendar(tm.Year));
+//    Serial.println();
+//  } else {
+//    if (RTC.chipPresent()) {
+//      Serial.println("The DS1307 is stopped.  Please run the SetTime");
+//      Serial.println("example to initialize the time and begin running.");
+//      Serial.println();
+//    } else {
+//      Serial.println("DS1307 read error!  Please check the circuitry.");
+//      Serial.println();
+//    }
+//    delay(9000);
+//  }
+  delay(1000);
 }
 
 void setTime()
 {
+  tmElements_t tm;
+  int dateTime[] = {2022, 1, 1, 0, 0};
   String ln1, ln2;
   int cmd = 0, prev_cmd = 0;
   int index = 0;
@@ -91,9 +127,21 @@ void setTime()
       prev_cmd = cmd;
     }
   }
+  
+
+  
   Print("Finished settime");
   ln1 = StringFormat(dateTime[0]) + "-" + StringFormat(dateTime[1]) + "-" + StringFormat(dateTime[2]) + " " + StringFormat(dateTime[3]) + ":" + StringFormat(dateTime[4]);
   Print(ln1);
+
+  //Create time element
+  tm.Year = dateTime[0] - 1970;
+  tm.Month = dateTime[1]; 
+  tm.Day = dateTime[2];
+  tm.Hour = dateTime[3];
+  tm.Minute = dateTime[4];
+  tm.Second = 1;
+  RTC.write(tm);
 }
 
 String StringFormat(int number) 
