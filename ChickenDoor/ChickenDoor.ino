@@ -17,7 +17,8 @@ const int adrRTC = 0x68;
 int joystickLimits[] = {0, 1023};
 int joystickThreshold = 200;
 
-
+int timeOpen[] = {8, 0};
+int timeClose[] = {21, 30};
 
 String previousPrint[] = {"", ""};
 
@@ -49,45 +50,38 @@ void setup()
 void loop()
 {
   tmElements_t tm;
+  String ln1;
   
   button.loop(); 
-  //ReadJoystick();
   
-//  if (RTC.read(tm)) {
-//    Serial.print("Ok, Time = ");
-//    print2digits(tm.Hour);
-//    Serial.write(':');
-//    print2digits(tm.Minute);
-//    Serial.write(':');
-//    print2digits(tm.Second);
-//    Serial.print(", Date (D/M/Y) = ");
-//    Serial.print(tm.Day);
-//    Serial.write('/');
-//    Serial.print(tm.Month);
-//    Serial.write('/');
-//    Serial.print(tmYearToCalendar(tm.Year));
-//    Serial.println();
-//  } else {
-//    if (RTC.chipPresent()) {
-//      Serial.println("The DS1307 is stopped.  Please run the SetTime");
-//      Serial.println("example to initialize the time and begin running.");
-//      Serial.println();
-//    } else {
-//      Serial.println("DS1307 read error!  Please check the circuitry.");
-//      Serial.println();
-//    }
-//    delay(9000);
-//  }
+  RTC.read(tm);
+  //ln1 = StringFormat(tm.Year + 1970) + "-" + StringFormat(tm.Month) + "-" + StringFormat(tm.Day) + " " + StringFormat(tm.Hour) + ":" + StringFormat(tm.Minute);
+  Print(tmToString(tm));
+
+  if (button.isPressed()) {
+    ;// todo add menu system, to change time, change open time, change closing time, manually controlled
+  }
+
+  // check if door open and should be closed
+
+  // check if door not open and should not be closed
+
   delay(1000);
 }
 
 void setTime()
 {
   tmElements_t tm;
-  int dateTime[] = {2022, 1, 1, 0, 0};
   String ln1, ln2;
   int cmd = 0, prev_cmd = 0;
   int index = 0;
+
+  tm.Year = 52;
+  tm.Month = 1; 
+  tm.Day = 1;
+  tm.Hour = 1;
+  tm.Minute = 1;
+  tm.Second = 1;
   
   bool finished = false;
   while (not finished) {
@@ -108,40 +102,44 @@ void setTime()
       }
       else if (cmd == 40) //Down, decrease value
       {  
-        if (dateTime[index] > 1)
-          dateTime[index]--;
+        if (index == 0 and tm.Year > 0)
+          tm.Year--;
+        else if (index == 1 and tm.Month > 1)
+          tm.Month--;
+        else if (index == 2 and tm.Day > 1)
+          tm.Day--;
+        else if (index == 3 and tm.Hour > 1)
+          tm.Hour--;
+        else if (index == 4 and tm.Minute > 1) 
+          tm.Minute--;
       }
       else if (cmd == 50) //Up, increase value
       {  
-        if ((index == 0 and dateTime[index] < 2100) or
-            (index == 1 and dateTime[index] < 12) or
-            (index == 2 and dateTime[index] < 31) or
-            (index == 3 and dateTime[index] < 23) or
-            (index == 4 and dateTime[index] < 59)) {
-          dateTime[index]++;
-        }
+        if (index == 0 and tm.Year < 99)
+          tm.Year++;
+        else if (index == 1 and tm.Month < 12)
+          tm.Month++;
+        else if (index == 2 and tm.Day < 31)
+          tm.Day++;
+        else if (index == 3 and tm.Hour < 23)
+          tm.Hour++;
+        else if (index == 4 and tm.Minute < 59) 
+          tm.Minute++;
       }
       
-      ln1 = StringFormat(dateTime[0]) + "-" + StringFormat(dateTime[1]) + "-" + StringFormat(dateTime[2]) + " " + StringFormat(dateTime[3]) + ":" + StringFormat(dateTime[4]);
-      Print("Set Date/Time", ln1);
+      Print("Set Date/Time", tmToString(tm));
       prev_cmd = cmd;
     }
   }
-  
 
-  
-  Print("Finished settime");
-  ln1 = StringFormat(dateTime[0]) + "-" + StringFormat(dateTime[1]) + "-" + StringFormat(dateTime[2]) + " " + StringFormat(dateTime[3]) + ":" + StringFormat(dateTime[4]);
-  Print(ln1);
+  Print("Finished settime", tmToString(tm));
 
-  //Create time element
-  tm.Year = dateTime[0] - 1970;
-  tm.Month = dateTime[1]; 
-  tm.Day = dateTime[2];
-  tm.Hour = dateTime[3];
-  tm.Minute = dateTime[4];
-  tm.Second = 1;
   RTC.write(tm);
+}
+
+String tmToString(tmElements_t tm) 
+{
+  return StringFormat(tm.Year + 1970) + "-" + StringFormat(tm.Month) + "-" + StringFormat(tm.Day) + " " + StringFormat(tm.Hour) + ":" + StringFormat(tm.Minute);
 }
 
 String StringFormat(int number) 
