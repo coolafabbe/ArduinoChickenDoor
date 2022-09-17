@@ -77,7 +77,9 @@ void settings()
   int cmd = 0, prev_cmd = 0;
 
   bool finished = false;
-  while (not finished) {
+  uint32_t startTime = millis();
+  while (!finished && !(millis() - startTime > 30000)) {
+    
     Print("Settings", menuLevels[currentMenuLevel]);
 
     button.loop();
@@ -104,6 +106,7 @@ void settings()
           currentMenuLevel += 1;
       }
       prev_cmd = cmd;
+      startTime = millis(); //New command restart timer
     }
   }
 }
