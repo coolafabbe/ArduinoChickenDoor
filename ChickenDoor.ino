@@ -8,6 +8,9 @@
 #define VRY_PIN  A1 // Arduino pin connected to VRY pin
 #define SW_PIN   2  // Arduino pin connected to SW  pin
 
+#define DN_PIN   3
+#define UP_PIN   4
+
 ezButton button(SW_PIN);
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
@@ -28,6 +31,11 @@ void setup()
 {
   tmElements_t tm;
   
+  pinMode(UP_PIN, OUTPUT);
+  pinMode(DN_PIN, OUTPUT);
+  digitalWrite(UP_PIN, LOW);
+  digitalWrite(DN_PIN, LOW);
+
   Wire.begin();
   lcd.begin();
   
@@ -94,6 +102,14 @@ void settings()
           setOpenClose(timeOpen, "Set opening");
         else if (currentMenuLevel == 2) 
           setOpenClose(timeClose, "Set closening");
+        else if (currentMenuLevel == 3) {
+          digitalWrite(UP_PIN, HIGH);
+          digitalWrite(DN_PIN, LOW);
+        }
+        else if (currentMenuLevel == 4) {
+          digitalWrite(UP_PIN, LOW);
+          digitalWrite(DN_PIN, HIGH);
+        }
       }
       else if (cmd == 20) //Left, previous value
       {
