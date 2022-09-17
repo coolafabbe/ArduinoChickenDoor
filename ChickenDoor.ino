@@ -14,8 +14,10 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 const int adrLCD = 0x27;
 const int adrRTC = 0x68;
 
-int joystickLimits[] = {0, 1023};
-int joystickThreshold = 200;
+const int joystickLimits[] = {0, 1023};
+const int joystickThreshold = 200;
+
+String menuLevels[] = {"Set Time", "Set Open", "Set Close", "Man Open", "Man Close", "Exit"};
 
 int timeOpen[] = {8, 0};
 int timeClose[] = {21, 30};
@@ -45,28 +47,65 @@ void setup()
       Print("Time is set.");
     else if (RTC.chipPresent())
       setTime();
+  }
+  else {
+    Print("Communication error.");
+    while (true) {
+      delay(1000);
+    }
   }  
 }  
 void loop()
 {
-  tmElements_t tm;
-  String ln1;
-  
   button.loop(); 
-  
+  tmElements_t tm;
   RTC.read(tm);
-  //ln1 = StringFormat(tm.Year + 1970) + "-" + StringFormat(tm.Month) + "-" + StringFormat(tm.Day) + " " + StringFormat(tm.Hour) + ":" + StringFormat(tm.Minute);
   Print(tmToString(tm));
 
   if (button.isPressed()) {
-    ;// todo add menu system, to change time, change open time, change closing time, manually controlled
+    settings(); // todo add menu system, to change time, change open time, change closing time, manually controlled
   }
 
   // check if door open and should be closed
 
   // check if door not open and should not be closed
+}
 
-  delay(1000);
+void settings()
+{
+  int currentMenuLevel = 0;
+  int cmd = 0, prev_cmd = 0;
+
+  bool finished = false;
+  while (not finished) {
+    Print("Settings", menuLevels[currentMenuLevel]);
+
+    button.loop();
+    int cmd = ReadJoystick();
+
+    if (cmd != prev_cmd) {
+      if (cmd == 10) {
+        finished = true;
+        if (currentMenuLevel == 0)
+          setTime();
+        else if (currentMenuLevel == 1) 
+          setOpenClose(timeOpen, "Set opening");
+        else if (currentMenuLevel == 2) 
+          setOpenClose(timeClose, "Set closening");
+      }
+      else if (cmd == 20) //Left, previous value
+      {
+        if (currentMenuLevel > 0)
+          currentMenuLevel += -1;
+      }
+      else if (cmd == 30) //Right, next value
+      {
+        if (currentMenuLevel < sizeof(menuLevels))
+          currentMenuLevel += 1;
+      }
+      prev_cmd = cmd;
+    }
+  }
 }
 
 void setTime()
@@ -135,6 +174,49 @@ void setTime()
   Print("Finished settime", tmToString(tm));
 
   RTC.write(tm);
+}
+
+void setOpenClose(int time[], String funccmd) 
+{
+  Print(funccmd, StringFormat(time[0])+":"+StringFormat(time[1]));
+  int cmd = 0, prev_cmd = 0;
+  int index = 0;
+  bool finished = false;
+  while (not finished) {
+    button.loop();
+    int cmd = ReadJoystick();
+    if (cmd != prev_cmd) {
+      if (cmd == 10) 
+        finished = true;
+      else if (cmd == 20) //Left, previous value
+      {
+        if (index > 0)
+          index += -1;
+      }
+      else if (cmd == 30) //Right, next value
+      {
+        if (index < 1)
+          index += 1;
+      }
+      else if (cmd == 40) //Down, decrease value
+      {  
+        if (time[index] > 0)
+          time[index]--;
+        Print(funccmd, StringFormat(time[0])+":"+StringFormat(time[1]));
+      }
+      else if (cmd == 50) //Up, increase value
+      {  
+        if (index == 0 and time[index] < 24)
+          time[index]++;
+        else if (index == 1 and time[index] < 60)
+          time[index]++;
+        Print(funccmd, StringFormat(time[0])+":"+StringFormat(time[1]));
+      }      
+      prev_cmd = cmd;
+    }
+  }
+  Print("Done " + funccmd + ":", StringFormat(time[0])+":"+StringFormat(time[1]));
+  //return time;
 }
 
 String tmToString(tmElements_t tm) 
