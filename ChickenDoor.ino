@@ -1,3 +1,4 @@
+#include <EEPROM.h>
 #include <DS1307RTC.h>
 #include <TimeLib.h>
 #include <Wire.h>
@@ -7,7 +8,6 @@
 #define VRX_PIN  A0 // Arduino pin connected to VRX pin
 #define VRY_PIN  A1 // Arduino pin connected to VRY pin
 #define SW_PIN   2  // Arduino pin connected to SW  pin
-
 #define DN_PIN   3
 #define UP_PIN   4
 
@@ -17,14 +17,13 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 const int adrLCD = 0x27;
 const int adrRTC = 0x68;
 
+byte timeOpen[] = {8, 0};    //[hour, minute] of when to open the door
+byte timeClose[] = {21, 30}; //[hour, minute] of when to open the door
+
 const int joystickLimits[] = {0, 1023};
 const int joystickThreshold = 200;
 
 String menuLevels[] = {"Set Time", "Set Open", "Set Close", "Man Open", "Man Close", "Exit"};
-
-int timeOpen[] = {8, 0};
-int timeClose[] = {21, 30};
-
 String previousPrint[] = {"", ""};
 
 void setup()
@@ -46,6 +45,26 @@ void setup()
   bool commRTC_OK = CheckI2CAdress(adrRTC);
 
   button.setDebounceTime(50); // set debounce time to 50 milliseconds
+
+  timeOpen[0] = EEPROM.read(0);
+  timeOpen[1] = EEPROM.read(1);
+  timeClose[0] = EEPROM.read(2);
+  timeClose[1] = EEPROM.read(3);
+
+  if (timeOpen[0] > 24 || timeOpen[1] > 59){
+    timeOpen[0] = 7;
+    timeOpen[1] = 45;
+    EEPROM.write(0, timeOpen[0]); // Write to EEPROM
+    EEPROM.write(1, timeOpen[1]); // Write to EEPROM
+    Print("Updating opening time in EEPROM.");
+  }
+  if (timeClose[0] > 24 || timeClose[1] > 59){
+    timeClose[0] = 20;
+    timeClose[1] = 30;
+    EEPROM.write(2, timeClose[0]); // Write to EEPROM
+    EEPROM.write(3, timeClose[1]); // Write to EEPROM
+    Print("Updating closening time in EEPROM.");
+  }
 
   lcd.begin();
   lcd.backlight();
@@ -98,10 +117,16 @@ void settings()
         finished = true;
         if (currentMenuLevel == 0)
           setTime();
-        else if (currentMenuLevel == 1) 
+        else if (currentMenuLevel == 1) {
           setOpenClose(timeOpen, "Set opening");
-        else if (currentMenuLevel == 2) 
+          EEPROM.write(0, timeOpen[0]); // Write to EEPROM
+          EEPROM.write(1, timeOpen[1]); // Write to EEPROM
+        }
+        else if (currentMenuLevel == 2) {
           setOpenClose(timeClose, "Set closening");
+          EEPROM.write(2, timeClose[0]); // Write to EEPROM
+          EEPROM.write(3, timeClose[1]); // Write to EEPROM
+        }
         else if (currentMenuLevel == 3) {
           digitalWrite(UP_PIN, HIGH);
           digitalWrite(DN_PIN, LOW);
@@ -195,7 +220,7 @@ void setTime()
   RTC.write(tm);
 }
 
-void setOpenClose(int time[], String funccmd) 
+void setOpenClose(byte time[], String funccmd) 
 {
   Print(funccmd, StringFormat(time[0])+":"+StringFormat(time[1]));
   int cmd = 0, prev_cmd = 0;
