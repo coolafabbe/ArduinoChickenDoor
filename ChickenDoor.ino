@@ -46,6 +46,7 @@ void setup()
 
   button.setDebounceTime(50); // set debounce time to 50 milliseconds
 
+  //read opening/closing times saved in EEPROM
   timeOpen[0] = EEPROM.read(0);
   timeOpen[1] = EEPROM.read(1);
   timeClose[0] = EEPROM.read(2);
@@ -73,7 +74,13 @@ void setup()
     if (RTC.read(tm))
       Print("Time is set.");
     else if (RTC.chipPresent())
-      setTime();
+      tm.Year = 52;
+      tm.Month = 1; 
+      tm.Day = 1;
+      tm.Hour = 1;
+      tm.Minute = 1;
+      tm.Second = 1;
+      setTime(tm);
   }
   else {
     Print("Communication error.");
@@ -115,8 +122,11 @@ void settings()
     if (cmd != prev_cmd) {
       if (cmd == 10) {
         finished = true;
-        if (currentMenuLevel == 0)
-          setTime();
+        if (currentMenuLevel == 0) {
+          tmElements_t tm;
+          RTC.read(tm);
+          setTime(tm);
+        }
         else if (currentMenuLevel == 1) {
           setOpenClose(timeOpen, "Set opening");
           EEPROM.write(0, timeOpen[0]); // Write to EEPROM
@@ -152,20 +162,12 @@ void settings()
   }
 }
 
-void setTime()
+void setTime(tmElements_t tm)
 {
-  tmElements_t tm;
   String ln1, ln2;
   int cmd = 0, prev_cmd = 0;
   int index = 0;
-
-  tm.Year = 52;
-  tm.Month = 1; 
-  tm.Day = 1;
-  tm.Hour = 1;
-  tm.Minute = 1;
-  tm.Second = 1;
-  
+ 
   bool finished = false;
   while (not finished) {
     button.loop();
